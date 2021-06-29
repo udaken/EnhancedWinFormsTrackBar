@@ -36,7 +36,8 @@ namespace EnhancedTrackBar
             ;
     }
 
-    static class NatimeMethods
+    static class NativeMethods
+
     {
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern int GetWindowLong(HandleRef hWnd, GetWindowLongItemIndex nIndex);
