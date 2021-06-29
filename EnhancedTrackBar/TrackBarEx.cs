@@ -247,9 +247,9 @@ namespace EnhancedTrackBar
                 {
                     if (IsHandleCreated)
                     {
-                        var style = NatimeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
+                        var style = NativeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
                         style = (style & ~TBS_TRANSPARENTBKGND) | (value ? TBS_TRANSPARENTBKGND : 0);
-                        if (0 == NatimeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
+                        if (0 == NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
                         {
                             throw new Win32Exception();
                         }
@@ -270,9 +270,9 @@ namespace EnhancedTrackBar
                 {
                     if (IsHandleCreated)
                     {
-                        var style = NatimeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
+                        var style = NativeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
                         style = (style & ~TBS_ENABLESELRANGE) | (value ? TBS_ENABLESELRANGE : 0);
-                        if (0 == NatimeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
+                        if (0 == NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
                         {
                             throw new Win32Exception();
                         }
@@ -330,9 +330,9 @@ namespace EnhancedTrackBar
                 {
                     if (IsHandleCreated)
                     {
-                        var style = NatimeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
+                        var style = NativeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
                         style = (style & ~TBS_NOTHUMB) | (value ? TBS_NOTHUMB : 0);
-                        if (0 == NatimeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
+                        if (0 == NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
                         {
                             throw new Win32Exception();
                         }
@@ -379,7 +379,7 @@ namespace EnhancedTrackBar
         {
             if (IsHandleCreated)
             {
-                return NatimeMethods.SendMessage(HandleRef(), (int)msg, wparam, (IntPtr)lparam);
+                return NativeMethods.SendMessage(HandleRef(), (int)msg, wparam, (IntPtr)lparam);
             }
             return default;
         }
