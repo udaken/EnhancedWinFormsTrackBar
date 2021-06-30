@@ -19,7 +19,7 @@ namespace EnhancedTrackBar
 
     public partial class TrackBarEx : System.Windows.Forms.TrackBar
     {
-        const int
+        private const int
             TBS_ENABLESELRANGE = 0x0020,
             TBS_FIXEDLENGTH = 0x0040,
             TBS_NOTHUMB = 0x0080,
@@ -27,7 +27,7 @@ namespace EnhancedTrackBar
             TBS_NOTIFYBEFOREMOVE = 0x0800,
             TBS_TRANSPARENTBKGND = 0x1000;
 
-        const int
+        private const int
             TRBN_FIRST = -1501,
             TRBN_LAST = -1519,
             TRBN_THUMBPOSCHANGING = TRBN_FIRST - 1;
@@ -59,7 +59,7 @@ namespace EnhancedTrackBar
         private int selectionStart;
         private int selectionEnd;
         private int fixedThumbLength;
-        private TrackBarThumbStyle thumbStyle = TrackBarThumbStyle.Default;
+        private TrackBarThumbStyle thumbStyle;
 
         private static readonly object EVENT_PREVIEW_VALUE_CHANGE = new object();
         private static readonly object EVENT_NO_THUMB = new object();
@@ -99,7 +99,7 @@ namespace EnhancedTrackBar
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        struct NMHDR
+        private struct NMHDR
         {
             public IntPtr hwndFrom;
             public UIntPtr idFrom;
@@ -107,23 +107,23 @@ namespace EnhancedTrackBar
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        struct NMTRBTHUMBPOSCHANGING
+        private struct NMTRBTHUMBPOSCHANGING
         {
             public NMHDR hdr;
 
             public uint dwPos;
             public int nReason;
         }
-        bool ProcessThumbPosChanging(uint dwPos, int nReason)
+        private bool ProcessThumbPosChanging(uint dwPos, int nReason)
         {
             System.Diagnostics.Debug.WriteLine($"dwPos = {dwPos}, nReason={(Reason)nReason}, Value={Value}");
 
             return OnPreviewValueChange((int)dwPos);
         }
 
-        private PreviewValueChangeEventArgs previewValueChangeEventArgs = new PreviewValueChangeEventArgs();
+        private readonly PreviewValueChangeEventArgs previewValueChangeEventArgs = new PreviewValueChangeEventArgs();
 
-        bool OnPreviewValueChange(int newValue)
+        private bool OnPreviewValueChange(int newValue)
         {
             previewValueChangeEventArgs.Cancel = false;
             previewValueChangeEventArgs.NewValue = newValue;
@@ -252,7 +252,7 @@ namespace EnhancedTrackBar
                     {
                         var style = NativeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
                         style = (style & ~TBS_TRANSPARENTBKGND) | (value ? TBS_TRANSPARENTBKGND : 0);
-                        if (0 == NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
+                        if (NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style) == 0)
                         {
                             throw new Win32Exception();
                         }
@@ -275,7 +275,7 @@ namespace EnhancedTrackBar
                     {
                         var style = NativeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
                         style = (style & ~TBS_ENABLESELRANGE) | (value ? TBS_ENABLESELRANGE : 0);
-                        if (0 == NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
+                        if (NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style) == 0)
                         {
                             throw new Win32Exception();
                         }
@@ -333,7 +333,7 @@ namespace EnhancedTrackBar
                         var style = NativeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
                         style = (style & ~TBS_NOTHUMB) | (value == TrackBarThumbStyle.None ? TBS_NOTHUMB : 0);
                         style = (style & ~TBS_FIXEDLENGTH) | (value == TrackBarThumbStyle.FixedLength ? TBS_FIXEDLENGTH : 0);
-                        if (0 == NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
+                        if (NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style) == 0)
                         {
                             throw new Win32Exception();
                         }
@@ -354,9 +354,10 @@ namespace EnhancedTrackBar
                 if (value < 0)
                     throw new ArgumentOutOfRangeException(nameof(value));
 
-                if (fixedThumbLength != value && value != 0)
+                if (fixedThumbLength != value)
                 {
-                    SendMessage(TrackBarMessages.TBM_SETTHUMBLENGTH, (IntPtr)value, default);
+                    if (value != 0)
+                        SendMessage(TrackBarMessages.TBM_SETTHUMBLENGTH, (IntPtr)value, default);
                     fixedThumbLength = value;
                 }
             }
@@ -378,7 +379,7 @@ namespace EnhancedTrackBar
             return default;
         }
 
-        bool useNativeTooltips;
+        private bool useNativeTooltips;
 
         [DefaultValue(false)]
         public bool UseNativeTooltips
@@ -392,7 +393,7 @@ namespace EnhancedTrackBar
                     {
                         var style = NativeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
                         style = (style & ~TBS_TOOLTIPS) | (value ? TBS_TOOLTIPS : 0);
-                        if (0 == NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
+                        if (NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style) == 0)
                         {
                             throw new Win32Exception();
                         }
@@ -413,7 +414,7 @@ namespace EnhancedTrackBar
             }
             set
             {
-                IntPtr handle = value != null ? value.Handle : default;
+                IntPtr handle = (value?.Handle) ?? default;
                 SendMessage(TrackBarMessages.TBM_SETTOOLTIPS, handle, default);
             }
         }
@@ -426,7 +427,7 @@ namespace EnhancedTrackBar
         FixedLength,
     }
 
-    enum Reason
+    internal enum Reason
     {
         TB_LINEUP = 0,
         TB_LINEDOWN = 1,
@@ -438,5 +439,4 @@ namespace EnhancedTrackBar
         TB_BOTTOM = 7,
         TB_ENDTRACK = 8,
     }
-
 }
