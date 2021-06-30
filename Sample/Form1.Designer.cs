@@ -32,8 +32,8 @@ namespace EnhancedTrackBarSample
             this.trackBarEx1 = new EnhancedTrackBar.TrackBarEx();
             this.trackBar1 = new System.Windows.Forms.TrackBar();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
+            this.label1 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.trackBarEx2 = new EnhancedTrackBar.TrackBarEx();
@@ -52,6 +52,7 @@ namespace EnhancedTrackBarSample
             // 
             this.trackBarEx1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.trackBarEx1.FixedThumbLength = 50;
             this.trackBarEx1.LargeChange = 2;
             this.trackBarEx1.Location = new System.Drawing.Point(105, 12);
             this.trackBarEx1.Maximum = 100;
@@ -61,7 +62,7 @@ namespace EnhancedTrackBarSample
             this.trackBarEx1.ShowSelectionRange = true;
             this.trackBarEx1.Size = new System.Drawing.Size(264, 69);
             this.trackBarEx1.TabIndex = 0;
-            this.trackBarEx1.ThumbLength = 5;
+            this.trackBarEx1.ThumbStyle = EnhancedTrackBar.TrackBarThumbStyle.FixedLength;
             // 
             // trackBar1
             // 
@@ -83,6 +84,7 @@ namespace EnhancedTrackBarSample
             // 
             // splitContainer1.Panel1
             // 
+            this.splitContainer1.Panel1.BackColor = System.Drawing.SystemColors.ActiveCaption;
             this.splitContainer1.Panel1.Controls.Add(this.label2);
             this.splitContainer1.Panel1.Controls.Add(this.label1);
             this.splitContainer1.Panel1.Controls.Add(this.trackBarEx1);
@@ -98,15 +100,6 @@ namespace EnhancedTrackBarSample
             this.splitContainer1.SplitterDistance = 384;
             this.splitContainer1.TabIndex = 2;
             // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 12);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(98, 21);
-            this.label1.TabIndex = 2;
-            this.label1.Text = "Enhanced";
-            // 
             // label2
             // 
             this.label2.AutoSize = true;
@@ -115,6 +108,15 @@ namespace EnhancedTrackBarSample
             this.label2.Size = new System.Drawing.Size(98, 21);
             this.label2.TabIndex = 2;
             this.label2.Text = "WinForms";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(12, 12);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(98, 21);
+            this.label1.TabIndex = 2;
+            this.label1.Text = "Enhanced";
             // 
             // label3
             // 
@@ -148,7 +150,6 @@ namespace EnhancedTrackBarSample
             this.trackBarEx2.ShowSelectionRange = true;
             this.trackBarEx2.Size = new System.Drawing.Size(69, 264);
             this.trackBarEx2.TabIndex = 3;
-            this.trackBarEx2.ThumbLength = 5;
             // 
             // trackBar2
             // 

@@ -17,10 +17,11 @@ namespace EnhancedTrackBar
     [DefaultBindingProperty("Value")]
     [Designer("System.Windows.Forms.Design.TrackBarDesigner, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")]
 
-    public partial class TrackBarEx : TrackBar
+    public partial class TrackBarEx : System.Windows.Forms.TrackBar
     {
         const int
             TBS_ENABLESELRANGE = 0x0020,
+            TBS_FIXEDLENGTH = 0x0040,
             TBS_NOTHUMB = 0x0080,
             TBS_TOOLTIPS = 0x0100,
             TBS_NOTIFYBEFOREMOVE = 0x0800,
@@ -53,18 +54,19 @@ namespace EnhancedTrackBar
         }
 
         private readonly CancelEventArgs cancelEventArgs = new CancelEventArgs();
-        private bool noThumb;
         private bool transparentBackground;
         private bool showSelectionRange;
         private int selectionStart;
         private int selectionEnd;
-        private int thumbLength;
+        private int fixedThumbLength;
+        private TrackBarThumbStyle thumbStyle = TrackBarThumbStyle.Default;
 
         private static readonly object EVENT_PREVIEW_VALUE_CHANGE = new object();
         private static readonly object EVENT_NO_THUMB = new object();
         private static readonly object EVENT_SHOW_SELECTION_RANGE = new object();
         private static readonly object EVENT_SELECTION_START = new object();
         private static readonly object EVENT_SELECTION_END = new object();
+        private static readonly object EVENT_SHOW_TOOLTIP = new object();
 
         public event EventHandler<PreviewValueChangeEventArgs> PreviewValueChange
         {
@@ -162,7 +164,8 @@ namespace EnhancedTrackBar
             {
                 var param = base.CreateParams;
                 param.Style |= TBS_NOTIFYBEFOREMOVE;
-                param.Style |= NoThumb ? TBS_NOTHUMB : 0;
+                param.Style |= ThumbStyle == TrackBarThumbStyle.None ? TBS_NOTHUMB : 0;
+                param.Style |= ThumbStyle == TrackBarThumbStyle.FixedLength ? TBS_FIXEDLENGTH : 0;
                 param.Style |= ShowSelectionRange ? TBS_ENABLESELRANGE : 0;
                 param.Style |= TransparentBackground ? TBS_TRANSPARENTBKGND : 0;
                 return param;
@@ -232,15 +235,15 @@ namespace EnhancedTrackBar
                 SendMessage(TrackBarMessages.TBM_SETSELEND, default, SelectionEnd);
             }
 
-            if (thumbLength != 0)
-                SendMessage(TrackBarMessages.TBM_SETTHUMBLENGTH, (UIntPtr)thumbLength, default);
+            if (fixedThumbLength != 0)
+                SendMessage(TrackBarMessages.TBM_SETTHUMBLENGTH, (IntPtr)fixedThumbLength, default);
         }
 
         [Category("Appearance")]
         [DefaultValue(false)]
         public bool TransparentBackground
         {
-            get { return transparentBackground; }
+            get => transparentBackground;
             set
             {
                 if (transparentBackground != value)
@@ -263,7 +266,7 @@ namespace EnhancedTrackBar
         [DefaultValue(false)]
         public bool ShowSelectionRange
         {
-            get { return showSelectionRange; }
+            get => showSelectionRange;
             set
             {
                 if (showSelectionRange != value)
@@ -288,7 +291,7 @@ namespace EnhancedTrackBar
         [DefaultValue(0)]
         public int SelectionStart
         {
-            get { return selectionStart; }
+            get => selectionStart;
             set
             {
                 if (selectionStart != value)
@@ -304,7 +307,7 @@ namespace EnhancedTrackBar
         [DefaultValue(0)]
         public int SelectionEnd
         {
-            get { return selectionEnd; }
+            get => selectionEnd;
             set
             {
                 if (selectionEnd != value)
@@ -317,27 +320,25 @@ namespace EnhancedTrackBar
         }
 
         [Category("Appearance")]
-        [DefaultValue(false)]
-        public bool NoThumb
+        [DefaultValue(TrackBarThumbStyle.Default)]
+        public TrackBarThumbStyle ThumbStyle
         {
-            get
-            {
-                return noThumb;
-            }
+            get => thumbStyle;
             set
             {
-                if (noThumb != value)
+                if (thumbStyle != value)
                 {
                     if (IsHandleCreated)
                     {
                         var style = NativeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
-                        style = (style & ~TBS_NOTHUMB) | (value ? TBS_NOTHUMB : 0);
+                        style = (style & ~TBS_NOTHUMB) | (value == TrackBarThumbStyle.None ? TBS_NOTHUMB : 0);
+                        style = (style & ~TBS_FIXEDLENGTH) | (value == TrackBarThumbStyle.FixedLength ? TBS_FIXEDLENGTH : 0);
                         if (0 == NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
                         {
                             throw new Win32Exception();
                         }
                     }
-                    noThumb = value;
+                    thumbStyle = value;
                     (Events[EVENT_NO_THUMB] as EventHandler)?.Invoke(this, EventArgs.Empty);
                 }
             }
@@ -345,25 +346,18 @@ namespace EnhancedTrackBar
 
         [Category("Appearance")]
         [DefaultValue(0)]
-        public int ThumbLength
+        public int FixedThumbLength
         {
-            get
-            {
-                if (thumbLength == 0)
-                {
-                    thumbLength = (int)SendMessage(TrackBarMessages.TBM_GETTHUMBLENGTH, default, default);
-                }
-                return thumbLength;
-            }
+            get => fixedThumbLength;
             set
             {
-                if (value <= 0)
+                if (value < 0)
                     throw new ArgumentOutOfRangeException(nameof(value));
 
-                if (thumbLength != value && value != 0)
+                if (fixedThumbLength != value && value != 0)
                 {
-                    SendMessage(TrackBarMessages.TBM_SETTHUMBLENGTH, (UIntPtr)value, default);
-                    thumbLength = value;
+                    SendMessage(TrackBarMessages.TBM_SETTHUMBLENGTH, (IntPtr)value, default);
+                    fixedThumbLength = value;
                 }
             }
         }
@@ -375,7 +369,7 @@ namespace EnhancedTrackBar
 
         private HandleRef HandleRef() => new HandleRef(this, Handle);
 
-        private IntPtr SendMessage(TrackBarMessages msg, UIntPtr wparam, int lparam)
+        private IntPtr SendMessage(TrackBarMessages msg, IntPtr wparam, int lparam)
         {
             if (IsHandleCreated)
             {
@@ -384,21 +378,52 @@ namespace EnhancedTrackBar
             return default;
         }
 
+        bool useNativeTooltips;
+
+        [DefaultValue(false)]
+        public bool UseNativeTooltips
+        {
+            get => useNativeTooltips;
+            set
+            {
+                if (useNativeTooltips != value)
+                {
+                    if (IsHandleCreated)
+                    {
+                        var style = NativeMethods.GetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE);
+                        style = (style & ~TBS_TOOLTIPS) | (value ? TBS_TOOLTIPS : 0);
+                        if (0 == NativeMethods.SetWindowLong(HandleRef(), GetWindowLongItemIndex.GWL_STYLE, style))
+                        {
+                            throw new Win32Exception();
+                        }
+                    }
+                    useNativeTooltips = value;
+                    (Events[EVENT_SHOW_TOOLTIP] as EventHandler)?.Invoke(this, EventArgs.Empty);
+                }
+            }
+        }
+
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         [DefaultValue(null)]
-        public NativeWindow Tooltips
+        public NativeWindow NativeTooltips
         {
             get
             {
                 return NativeWindow.FromHandle(SendMessage(TrackBarMessages.TBM_GETTOOLTIPS, default, default));
             }
-
             set
             {
-                UIntPtr handle = value != null ? (UIntPtr)(ulong)value.Handle : default;
+                IntPtr handle = value != null ? value.Handle : default;
                 SendMessage(TrackBarMessages.TBM_SETTOOLTIPS, handle, default);
             }
         }
+    }
+
+    public enum TrackBarThumbStyle
+    {
+        Default,
+        None,
+        FixedLength,
     }
 
     enum Reason
