@@ -45,11 +45,15 @@ namespace EnhancedTrackBar
 
             TBM_CLEARSEL = WM_USER + 19,
 
+            TBM_GETTHUMBRECT = WM_USER + 25,
+
             TBM_SETTHUMBLENGTH = WM_USER + 27,
             TBM_GETTHUMBLENGTH = WM_USER + 28,
             TBM_SETTOOLTIPS = WM_USER + 29,
             TBM_GETTOOLTIPS = WM_USER + 30,
 
+            TBM_SETBUDDY = WM_USER + 32,
+            TBM_GETBUDDY = WM_USER + 33,
             TBM_STPOSNOTIFY = WM_USER + 34,
         }
 
@@ -60,6 +64,10 @@ namespace EnhancedTrackBar
         private int selectionEnd;
         private int fixedThumbLength;
         private TrackBarThumbStyle thumbStyle;
+        private bool useNativeTooltips;
+        NativeWindow nativeTooltips;
+        IWin32Window leftBuddyWindow;
+        IWin32Window rightBuddyWindow;
 
         private static readonly object EVENT_PREVIEW_VALUE_CHANGE = new object();
         private static readonly object EVENT_NO_THUMB = new object();
@@ -99,14 +107,6 @@ namespace EnhancedTrackBar
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct NMHDR
-        {
-            public IntPtr hwndFrom;
-            public UIntPtr idFrom;
-            public uint code;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
         private struct NMTRBTHUMBPOSCHANGING
         {
             public NMHDR hdr;
@@ -116,8 +116,6 @@ namespace EnhancedTrackBar
         }
         private bool ProcessThumbPosChanging(uint dwPos, int nReason)
         {
-            System.Diagnostics.Debug.WriteLine($"dwPos = {dwPos}, nReason={(Reason)nReason}, Value={Value}");
-
             return OnPreviewValueChange((int)dwPos);
         }
 
@@ -231,12 +229,21 @@ namespace EnhancedTrackBar
 
             if (ShowSelectionRange)
             {
-                SendMessage(TrackBarMessages.TBM_SETSELSTART, default, selectionStart);
-                SendMessage(TrackBarMessages.TBM_SETSELEND, default, SelectionEnd);
+                SendMessage(TrackBarMessages.TBM_SETSELSTART, WParam.FromBool(false), selectionStart);
+                SendMessage(TrackBarMessages.TBM_SETSELEND, WParam.FromBool(false), SelectionEnd);
             }
 
             if (fixedThumbLength != 0)
-                SendMessage(TrackBarMessages.TBM_SETTHUMBLENGTH, (IntPtr)fixedThumbLength, default);
+                SendMessage(TrackBarMessages.TBM_SETTHUMBLENGTH, (IntPtr)fixedThumbLength, 0);
+
+            if (nativeTooltips != null)
+                SendMessage(TrackBarMessages.TBM_SETTOOLTIPS, nativeTooltips.Handle, 0);
+
+            if (leftBuddyWindow != null)
+                SetBuddy(true, leftBuddyWindow.Handle);
+
+            if (rightBuddyWindow != null)
+                SetBuddy(false, rightBuddyWindow.Handle);
         }
 
         [Category("Appearance")]
@@ -357,7 +364,7 @@ namespace EnhancedTrackBar
                 if (fixedThumbLength != value)
                 {
                     if (value != 0)
-                        SendMessage(TrackBarMessages.TBM_SETTHUMBLENGTH, (IntPtr)value, default);
+                        SendMessage(TrackBarMessages.TBM_SETTHUMBLENGTH, (IntPtr)value, 0);
                     fixedThumbLength = value;
                 }
             }
@@ -365,21 +372,20 @@ namespace EnhancedTrackBar
 
         public void ClearSeleciton(bool redraw = true)
         {
-            SendMessage(TrackBarMessages.TBM_CLEARSEL, WParam.FromBool(redraw), default);
+            SendMessage(TrackBarMessages.TBM_CLEARSEL, WParam.FromBool(redraw), 0);
         }
 
         private HandleRef HandleRef() => new HandleRef(this, Handle);
 
         private IntPtr SendMessage(TrackBarMessages msg, IntPtr wparam, int lparam)
         {
-            if (IsHandleCreated)
-            {
-                return NativeMethods.SendMessage(HandleRef(), (int)msg, wparam, (IntPtr)lparam);
-            }
-            return default;
+            return IsHandleCreated ? NativeMethods.SendMessage(HandleRef(), (int)msg, wparam, (IntPtr)lparam) : default;
         }
 
-        private bool useNativeTooltips;
+        private IntPtr SendMessage(TrackBarMessages msg, IntPtr wparam, IntPtr lparam)
+        {
+            return IsHandleCreated ? NativeMethods.SendMessage(HandleRef(), (int)msg, (IntPtr)wparam, lparam) : default;
+        }
 
         [DefaultValue(false)]
         public bool UseNativeTooltips
@@ -410,21 +416,78 @@ namespace EnhancedTrackBar
         {
             get
             {
-                return NativeWindow.FromHandle(SendMessage(TrackBarMessages.TBM_GETTOOLTIPS, default, default));
+                return NativeWindow.FromHandle(SendMessage(TrackBarMessages.TBM_GETTOOLTIPS, default, 0));
             }
             set
             {
-                IntPtr handle = (value?.Handle) ?? default;
-                SendMessage(TrackBarMessages.TBM_SETTOOLTIPS, handle, default);
+                SendMessage(TrackBarMessages.TBM_SETTOOLTIPS, (value?.Handle) ?? default, 0);
+                nativeTooltips = value;
             }
         }
-    }
 
-    public enum TrackBarThumbStyle
-    {
-        Default,
-        None,
-        FixedLength,
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        [DefaultValue(null)]
+        public IWin32Window LeftTopBuddyWindow
+        {
+            get
+            {
+                if (leftBuddyWindow == null)
+                    return NativeWindow.FromHandle(SendMessage(TrackBarMessages.TBM_GETBUDDY, WParam.FromBool(true), 0));
+                else
+                    return leftBuddyWindow;
+            }
+            set
+            {
+                SetBuddy(true, (value?.Handle) ?? default);
+                leftBuddyWindow = value;
+            }
+        }
+
+
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        [DefaultValue(null)]
+        public IWin32Window RightBottomBuddyWindow
+        {
+            get
+            {
+                if (rightBuddyWindow == null)
+                    return NativeWindow.FromHandle(SendMessage(TrackBarMessages.TBM_GETBUDDY, WParam.FromBool(false), 0));
+                else
+                    return rightBuddyWindow;
+            }
+            set
+            {
+                SetBuddy(false, (value?.Handle) ?? default);
+                rightBuddyWindow = value;
+            }
+        }
+
+        private void SetBuddy(bool leftTop, IntPtr handle)
+        {
+            if (IsHandleCreated)
+                SendMessage(TrackBarMessages.TBM_SETBUDDY, WParam.FromBool(leftTop), handle);
+        }
+
+        [Category("Appearance")]
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        public Rectangle ThumbRect
+        {
+            get
+            {
+                var p = Marshal.AllocCoTaskMem(Marshal.SizeOf<RECT>());
+                try
+                {
+                    SendMessage(TrackBarMessages.TBM_GETTHUMBRECT, default, p);
+                    var r = Marshal.PtrToStructure<RECT>(p);
+                    return new Rectangle(r.left, r.top, r.right - r.left, r.bottom - r.top);
+                }
+                finally
+                {
+                    Marshal.FreeCoTaskMem(p);
+                }
+            }
+        }
+
     }
 
     internal enum Reason

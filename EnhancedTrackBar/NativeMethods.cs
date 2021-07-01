@@ -15,6 +15,22 @@ namespace EnhancedTrackBar
         }
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    struct NMHDR
+    {
+        public IntPtr hwndFrom;
+        public UIntPtr idFrom;
+        public uint code;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct RECT
+    {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
 
     enum GetWindowLongItemIndex
     {
@@ -52,7 +68,7 @@ namespace EnhancedTrackBar
         public static extern IntPtr SetWindowLongPtr(HandleRef hWnd, GetWindowLongItemIndex nIndex, IntPtr dwNewLog);
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr SendMessage(HandleRef hWnd, int msg, [MarshalAs(UnmanagedType.SysUInt)]IntPtr wparam, IntPtr lparam);
+        public static extern IntPtr SendMessage(HandleRef hWnd, int msg, [MarshalAs(UnmanagedType.SysUInt)] IntPtr wparam, IntPtr lparam);
 
 
         public static T GetLParam<T>(in this System.Windows.Forms.Message m) where T : struct
